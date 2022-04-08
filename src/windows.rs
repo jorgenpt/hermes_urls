@@ -73,7 +73,7 @@ fn register_command(
     );
 
     info!("registering command for {}://", protocol);
-    let config_path = get_configuration_registry_key(&protocol);
+    let config_path = get_configuration_registry_key(protocol);
     let (config, _) = hkcu.create_subkey(&config_path)?;
     config.set_value("command", commandline)?;
 
