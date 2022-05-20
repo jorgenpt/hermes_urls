@@ -160,6 +160,13 @@ fn open_url(url: &str) -> Result<()> {
         path
     );
 
+    // Allow any process to steal focus from us, so that we will transfer focus "nicely" to
+    // Unreal.
+    use windows::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+    unsafe {
+        AllowSetForegroundWindow(ASFW_ANY);
+    }
+
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let config = hkcu
         .open_subkey(get_configuration_registry_key(protocol))

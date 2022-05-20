@@ -12,7 +12,7 @@
 #[cfg(target_os = "windows")]
 pub mod windows;
 #[cfg(target_os = "windows")]
-pub use windows as os;
+pub use crate::windows as os;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(os::main()?)
