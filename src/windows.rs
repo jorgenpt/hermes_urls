@@ -1,11 +1,11 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 use anyhow::{anyhow, bail, Context, Result};
-use log::{debug, info, trace, warn};
+use log::{debug, error, info, trace, warn};
 use mail_slot::{MailslotClient, MailslotName};
 use simplelog::*;
 use std::{
     fs::{File, OpenOptions},
-    io,
+    io::{self, ErrorKind},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -178,17 +178,27 @@ fn open_url(url: &str) -> Result<()> {
     let could_send = {
         let slot = MailslotName::local(&format!(r"bitSpatter\Hermes\{}", protocol));
         trace!("Attempting to send URL to mailslot {}", slot.to_string());
-        if let Ok(mut client) = MailslotClient::new(&slot) {
-            if let Err(error) = client.send_message(full_path.as_bytes()) {
-                warn!("Could not send mail slot message to {}: {} -- assuming application is shutting down, starting a new one", slot.to_string(), error);
-                false
-            } else {
-                trace!("Delivered using Mailslot");
-                true
+        match MailslotClient::new(&slot) {
+            Ok(mut client) => {
+                if let Err(error) = client.send_message(full_path.as_bytes()) {
+                    warn!("Could not send mail slot message to {}: {} -- assuming application is shutting down, starting a new one", slot.to_string(), error);
+                    false
+                } else {
+                    trace!("Delivered using Mailslot");
+                    true
+                }
             }
-        } else {
-            trace!("Could not connect to Mailslot, assuming application is not running");
-            false
+            Err(mail_slot::Error::Io(io_error)) if io_error.kind() == ErrorKind::NotFound => {
+                trace!("Mailslot not found, assuming application is not running");
+                false
+            }
+            Err(err) => {
+                error!(
+                    "Could not connect to Mailslot, assuming application is not running: {:?}",
+                    err
+                );
+                false
+            }
         }
     };
 
